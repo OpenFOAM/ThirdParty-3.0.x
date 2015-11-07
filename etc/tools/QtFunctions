@@ -1,0 +1,148 @@
+#---------------------------------*- sh -*-------------------------------------
+# =========                 |
+# \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+#  \\    /   O peration     |
+#   \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+#    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+# License
+#     This file is part of OpenFOAM.
+#
+#     OpenFOAM is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+#     ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#     FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#     for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# File
+#     etc/tools/QtFunction
+#
+# Description
+#     Functions for helping relocate a QT installation
+#
+#------------------------------------------------------------------------------
+
+#
+# create a qt.conf file in the QT bin/
+# this can be modified easily if the qt installation gets relocated
+#
+createQtConf()
+{
+    echo "create:"
+    echo "    $prefixDIR/bin/qt.conf"
+
+    [ -n "$prefixDIR" -a -d "$prefixDIR/bin" ] || {
+        echo "Error: prefixDIR not correctly set"
+        return
+    }
+
+    echo "[Paths]"            > $prefixDIR/bin/qt.conf
+    echo "Prefix=$prefixDIR" >> $prefixDIR/bin/qt.conf
+}
+
+
+#
+# adjust pkgconfig information
+# to generalize *location=, -L/... and -I/...
+# to use ${prefix}
+#
+adjustPkgConfig()
+{
+    echo "edit pkgconfig:"
+    echo "    $prefixDIR/lib/pkgconfig/*.pc"
+
+    [ -n "$prefixDIR" -a -d "$prefixDIR/lib/pkgconfig" ] || {
+        echo "Error: prefixDIR not correctly set"
+        return
+    }
+
+    (
+        cd $prefixDIR/lib/pkgconfig || exit
+
+        unset nfiles
+        for i in *.pc
+        do
+            if [ -f "$i" ]
+            then
+                nfiles="x$nfiles"
+                sed -i \
+                    -e 's@\(location=\)'"$prefixDIR/"'@\1${prefix}/@' \
+                    -e 's@\(-[IL]\)'"$prefixDIR/"'@\1${prefix}/@g'    \
+                    $i
+            fi
+        done
+        echo "    edited ${#nfiles} files"
+    )
+}
+
+
+#
+# change prefix=... and Prefix=... to use ${prefix}
+#
+changePrefix()
+{
+    echo "relocate QT installation to new prefix directory:"
+    echo "    $prefixDIR"
+    echo "edit:"
+    echo "    $prefixDIR/bin/qt.conf"
+    echo "    $prefixDIR/lib/pkgconfig/*.pc"
+
+    [ -n "$prefixDIR" -a -d "$prefixDIR/bin" -a -d "$prefixDIR/lib/pkgconfig" ] || {
+        echo "Error: prefixDIR not correctly set"
+        return
+    }
+
+    # adjust qt.conf
+    for i in $prefixDIR/bin/qt.conf
+    do
+        if [ -f "$i" ]
+        then
+            nfiles="x$nfiles"
+            sed -i \
+                -e 's@^\([Pp]refix=\).*$@\1'"$prefixDIR@" \
+                $i
+            echo "    edited 1 file"
+        fi
+    done
+
+    # adjust pkgconfig files
+    (
+        cd $prefixDIR/lib/pkgconfig || exit
+
+        unset nfiles
+        for i in *.pc
+        do
+            if [ -f "$i" ]
+            then
+                nfiles="x$nfiles"
+                sed -i \
+                    -e 's@^\([Pp]refix=\).*$@\1'"$prefixDIR@" \
+                    $i
+            fi
+        done
+        echo "    edited ${#nfiles} files"
+    )
+
+}
+
+# ------------------------------------------------------------------------------
+
+#
+# create qt.conf and adjustPkgConfig to use ${prefix} internally
+#
+finalizeQt()
+{
+    echo "Create/Edit files to ease later relocation of a QT installation"
+    createQtConf
+    adjustPkgConfig
+}
+
+
+# ----------------------------------------------------------------- end-of-file

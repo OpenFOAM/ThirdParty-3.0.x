@@ -1,0 +1,92 @@
+#!/bin/sh
+#------------------------------------------------------------------------------
+# =========                 |
+# \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+#  \\    /   O peration     |
+#   \\  /    A nd           | Copyright (C) 2011 OpenFOAM Foundation
+#    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+# License
+#     This file is part of OpenFOAM.
+#
+#     OpenFOAM is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+#     ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#     FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#     for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Script
+#     etc/relocateQt
+#
+# Description
+#     Change prefix when relocating qt installation
+#
+#------------------------------------------------------------------------------
+qtVERSION=4.7.2
+#------------------------------------------------------------------------------
+# run from third-party directory only
+wmakeCheckPwd "$WM_THIRD_PARTY_DIR" || {
+    echo "Error: Current directory is not \$WM_THIRD_PARTY_DIR"
+    echo "    The environment variables are inconsistent with the installation."
+    echo "    Check the OpenFOAM entries in your dot-files and source them."
+    exit 1
+}
+. etc/tools/ThirdPartyFunctions
+. etc/tools/QtFunctions
+#------------------------------------------------------------------------------
+
+usage() {
+    exec 1>&2
+    while [ "$#" -ge 1 ]; do echo "$1"; shift; done
+    cat<<USAGE
+
+usage: ${0##*/} [OPTION] [VERSION]
+options:
+  -force            create qt.conf and edit pkgconfig to use \${prefix}
+  -help
+
+* adjust relocation prefix for $qtVERSION
+
+USAGE
+    exit 1
+}
+
+
+unset forceOpt
+# parse options
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+    -h | -help)
+        usage
+        ;;
+    -f | -force)
+        forceOpt=true
+        shift
+        ;;
+    [1-9]* | qt-[1-9]*)
+        qtVERSION="${1%%/}";
+        qtVERSION="${qtVERSION#qt-}"
+        shift
+        ;;
+    *)
+        usage "unknown option/argument: '$*'"
+        ;;
+    esac
+done
+
+#------------------------------------------------------------------------------
+prefixDIR=$installBASE/qt-$qtVERSION
+
+[ "${forceOpt:-false}" = true ] && finalizeQt
+changePrefix
+
+
+# ----------------------------------------------------------------- end-of-file
